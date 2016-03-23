@@ -1,8 +1,9 @@
 # Examination of Seattle's 911 Incident Response data
 #
-# TODO: Add timestamp column to IncidentResponseData BEFORE formatting date
-#
-#
+# TODO: 
+# Define functions outside of main process?
+# Replace map list for loop with laply()?
+# Plotly for mapping? library(c(gridExtra, plotly, ggplot2))
 
 ############################
 # Load required libraries
@@ -10,6 +11,7 @@
 library(ggplot2)
 library(rgdal)
 library(ggmap)
+library(GISTools)
 
 ############################
 # Load 911 Response data
@@ -29,9 +31,8 @@ table(IncidentResponseData$Event.Clearance.Group) #Summary...have a lot of blank
 head(IncidentResponseData$Initial.Type.Group) #39 different Initial Type Group levels
 table(IncidentResponseData$Initial.Type.Group) #Summary...have a lot of blank values
 
-
 ############################
-# Munge
+# Munge munge munge...
 ############################
 
 #Several records have no value recorded for Event.Clearance.Group or Initial.Type.Group. Let's add "Unknown" to this.
@@ -44,15 +45,20 @@ IncidentResponseData$Initial.Type.Group <- as.character(IncidentResponseData$Ini
 IncidentResponseData$Initial.Type.Group[IncidentResponseData$Initial.Type.Group==""] <- "UNKNOWN"
 IncidentResponseData$Initial.Type.Group <- as.factor(IncidentResponseData$Initial.Type.Group)
 
-#convert incident date to date format and add timestamp column
-IncidentResponseData$Event.Clearance.Date <- as.Date(IncidentResponseData$Event.Clearance.Date, format="%m/%d/%Y") 
+#convert incident date to POSITXlt format
+IncidentResponseData$Event.Clearance.Date <- strptime(IncidentResponseData$Event.Clearance.Date, format="%m/%d/%Y %H:%M:%S") 
 
 #Set up some variables
 EventClearanceGroup <- data.frame(c(levels(IncidentResponseData$Event.Clearance.Group)))
 InitialTypeGroup <- data.frame(c(levels(IncidentResponseData$Initial.Type.Group)))
 IncidentResponseDataPoints2016 <- with(IncidentResponseData, IncidentResponseData[(Event.Clearance.Date >= "2016-01-01") & !is.na(Event.Clearance.Date),])
-IncidentResponseDataPoints2015 <- with(IncidentResponseData, IncidentResponseData[(Event.Clearance.Date >= "2015-01-01") & (Event.Clearance.Date < "2016-01-01") &!is.na(Event.Clearance.Date),])
-  #Can break out data by year if needed. May not have to. 
+
+#Set up version of data as SpatialPointsDataFrame object. Deal with NA values in lat/lon 
+#xy <- IncidentResponseData[!is.na(IncidentResponseData$Latitude) & !is.na(IncidentResponseData$Longitude),c(13,14)] #get lat/lon values from dataframe
+xy <- IncidentResponseData[,c(13,14)]
+xy[is.na(xy$Longitude) | is.na(xy$Latitude),] <- 0
+IncidentResponseSpatialPoints <- SpatialPointsDataFrame(coords = xy, data = IncidentResponseData, 
+                                                        proj4string = CRS("+proj=longlat +datum=WGS84"))
 
 ############################
 # Exploratory Mapping
@@ -116,6 +122,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 }
 
 ############################
+
 # Plot points by selected incident type from original data
 mapListAll <- list()
 j=1
@@ -129,11 +136,14 @@ for (i in 1:nrow(EventClearanceGroup)){
 }
 
 # There are 45 maps in mapList. I'll do 3x3 plots. 
+# Output to PDF so maps don't need to be constantly recreated
+pdf(file="AllIncidentsByClearanceGroup.pdf")
 multiplot(plotlist=mapListAll[c(1:9)], cols=3)
 multiplot(plotlist=mapListAll[c(10:18)], cols=3)
 multiplot(plotlist=mapListAll[c(19:27)], cols=3)
 multiplot(plotlist=mapListAll[c(28:36)], cols=3)
 multiplot(plotlist=mapListAll[c(37:45)], cols=3)
+dev.off()
 
 # Plot points by selected incident type from 2016 data
 mapList2016 <- list()
@@ -148,17 +158,19 @@ for (i in 1:nrow(EventClearanceGroup)) {
 }  
 
 # There are 39 maps in mapList. I'll do 3x3 plots. 
-
+# Output to PDF so maps don't need to be constantly recreated
+pdf(file="2016IncidentsByClearanceGroup.pdf")
 multiplot(plotlist=mapList2016[c(1:9)], cols=3)
 multiplot(plotlist=mapList2016[c(10:18)], cols=3)
 multiplot(plotlist=mapList2016[c(19:27)], cols=3)
 multiplot(plotlist=mapList2016[c(28:36)], cols=3)
 multiplot(plotlist=mapList2016[c(37:39)], cols=3)
+dev.off()
 
-
-
-
-
+############################
+# Kernel Density Mapping
+############################
+ 
 
 
 ####
