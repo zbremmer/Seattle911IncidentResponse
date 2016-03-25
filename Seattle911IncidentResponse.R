@@ -3,7 +3,7 @@
 # TODO: 
 # Define functions outside of main process?
 # Replace map list for loop with laply()?
-# Plotly for mapping? library(c(gridExtra, plotly, ggplot2))
+# Plotly for mapping? library(gridExtra, plotly, ggplot2)
 
 ############################
 # Load required libraries
@@ -35,6 +35,18 @@ table(IncidentResponseData$Initial.Type.Group) #Summary...have a lot of blank va
 # Munge munge munge...
 ############################
 
+###
+# Need to look at this data more closely. What needs to be a factor? What needs to be a continuous value? Char?
+# Format each col into the type it should be in.
+# Deal with nulls/NAs in each column. 
+###
+
+
+
+
+
+
+
 #Several records have no value recorded for Event.Clearance.Group or Initial.Type.Group. Let's add "Unknown" to this.
 IncidentResponseData$Event.Clearance.Group <- as.character(IncidentResponseData$Event.Clearance.Group)
 IncidentResponseData$Event.Clearance.Group[IncidentResponseData$Event.Clearance.Group==""] <- "UNKNOWN" # change empty values to UNKNOWN
@@ -46,6 +58,7 @@ IncidentResponseData$Initial.Type.Group[IncidentResponseData$Initial.Type.Group=
 IncidentResponseData$Initial.Type.Group <- as.factor(IncidentResponseData$Initial.Type.Group)
 
 #convert incident date to POSITXlt format
+  ## Need to deal with null/NA values. 
 IncidentResponseData$Event.Clearance.Date <- strptime(IncidentResponseData$Event.Clearance.Date, format="%m/%d/%Y %H:%M:%S") 
 
 #Set up some variables
@@ -178,7 +191,27 @@ dev.off()
 # Ideas for engineered features:
 # -Day of Week    -Weekday/Weekend  -Before/After Dark
 # -Type (violent, non-violent, etc.)  
-# -Holiday  -
+# -Holiday  -Census Block   -Zip code -Neighborhood
+# -Time of day  -Pop density (avail by block?) -Income by census ZIP
+# -is park?     -Lat/lon from Incident.Location is more accurate than Lat/Lon but needs splitting  
 ####
+
+# See what kind of maps seattle has - if has park map for ex. - can can do intersection to find if park, etc.
+
+############################
+# Build some features
+############################
+
+# Not sure if this is the best way to do this!
+
+# List weekday for Event.Clearance.Date
+IncidentResponseData$Day <- factor(weekdays(IncidentResponseData$Event.Clearance.Date))
+# Is day a weekend?
+IncidentResponseData$Weekend <- IncidentResponseData$Day == "Saturday" | IncidentResponseData$Day == "Sunday"
+
+
+# Output updated csv
+write.csv(IncidentResponseData, file="Seattle911IncidentResponseDataFeatures.csv")
+
 
 
